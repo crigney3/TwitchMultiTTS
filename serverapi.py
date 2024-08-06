@@ -8,6 +8,7 @@ from collections import deque
 from starlette.status import HTTP_201_CREATED, HTTP_202_ACCEPTED
 import threading
 import time
+import os
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -16,8 +17,23 @@ print(device)
 queues = dict(pending=deque(), working=deque(), finished=deque())
 
 tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+tts2 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+tts3 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+
+ttsProcessors = [tts, tts2, tts3]
+
+def cleanup_files(threadID):
+    while True:
+        if len(queues['finished']) > 0:
+            newJob = queues['finished'].popleft()
+            # sleep for a bit to ensure the file isn't still being streamed
+            time.sleep(20)
+            filePath = newJob['id'] + '.wav'
+            os.remove(filePath)
 
 def process_audio(threadID):
+    ttsProcessor = ttsProcessors[int(threadID / 1000)]
+
     while True:
         if len(queues['pending']) > 0:
             # pop left side with append right means oldest first
@@ -26,10 +42,11 @@ def process_audio(threadID):
             newJob['status'] = 'working'
             filePath = newJob['id'] + '.wav'
             print('thread ' + str(threadID) + 'picked up new job with id: ' + newJob['id'])
-            tts.tts_to_file(text=newJob['_message'], speaker_wav="VoiceClone.wav", language="en", file_path=filePath)
+            ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav="VoiceClone.wav", language="en", file_path=filePath)
             newJob['status'] = 'finished'
             queues['working'].remove(newJob)
             queues['finished'].append(newJob)
+            print('File processed')
         else:
             time.sleep(0.5)
 
@@ -46,9 +63,13 @@ def get_job(id: str, queue: str = None, order=['finished', 'working', 'pending']
 
 app = FastAPI()
 
+# Create the audio processor threads
 threading.Thread(target=process_audio, args=(1000,)).start()
 threading.Thread(target=process_audio, args=(2000,)).start()
 threading.Thread(target=process_audio, args=(3000,)).start()
+
+# Create the cleanup thread
+#threading.Thread(target=cleanup_files, args=(80000,)).start()
 
 class BaseJob(BaseModel):
     id: str
