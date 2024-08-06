@@ -110,11 +110,15 @@ def handle_message(message):
         # Basic guess is that it takes another second per 20 characters.
         # This sleep keeps the script from spamming the server to check if its
         # file is ready yet.
-        sleepLength = float(3 + (len(msg) / 20))
+        sleepLength = float(2 + (len(msg) / 10))
         print("sleeping for: " + str(sleepLength))
         time.sleep(sleepLength)
 
+        # keep a count to ensure we don't fail unexpectedly and ping forever
+        retryCount = 0
         while True:
+            if retryCount > 40:
+                break
             jobStatus = requests.get('http://dionysus.headass.house:8000/jobs/' + jobId, params={"id": jobId})
             jobStatusData = jobStatus.json()
             if jobStatusData['status'] == 'finished':
@@ -122,13 +126,17 @@ def handle_message(message):
             elif jobStatusData['status'] == 'pending':
                 print("Job is still pending - are messages very backed up?")
                 time.sleep(sleepLength)
+                retryCount += 1
             elif jobStatusData['status'] == 'working':
                 # If the job is still working, sleep for a bit
                 time.sleep(1.0)
+                retryCount += 1
             else:
-                print("Got bad status code, check server for issues")
-                break
+                raise Exception("Got bad status code, check server for issues")
         
+        if retryCount > 40:
+            raise Exception("Too many retries!")
+
         audioResponse = requests.get("http://dionysus.headass.house:8000/get-audio/" + jobId, params={"id": jobId})
 
         #response = requests.get("http://dionysus.headass.house:8000/get-audio", params={"username": "yakman333"})
