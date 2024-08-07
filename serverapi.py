@@ -14,7 +14,7 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 voices = dict(default="VoiceClone.wav", tori="ToriNormal.wav", corey="CoreyNormal.wav")
 
-queues = dict(pending=deque(), working=deque(), finished=deque())
+queues = dict(pending=deque(), working=deque(), finished=deque(), cleanup=deque())
 
 tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 tts2 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
@@ -24,9 +24,9 @@ ttsProcessors = [tts, tts2, tts3]
 
 def cleanup_files(threadID):
     while True:
-        if len(queues['finished']) > 0:
+        if len(queues['cleanup']) > 0:
             print('got file to cleanup')
-            newJob = queues['finished'].popleft()
+            newJob = queues['cleanup'].popleft()
             while True:
                 if newJob['status'] == 'cleanup':
                     print('file marked as cleanup')
@@ -121,6 +121,8 @@ def audioById(id: str):
     job, status = get_job(id)
     filePath = job['id'] + '.wav'
     job['status'] = 'cleanup'
+    queues['finished'].remove(job)
+    queues['cleanup'].append(job)
     return FileResponse(path=filePath, filename=filePath, media_type='text/wav')
 
 @app.get("/get-audio")
