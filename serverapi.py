@@ -38,7 +38,6 @@ def cleanup_files(threadID):
             filePath = newJob['id'] + '.wav'
             os.remove(filePath)
         else:
-            print('sleeping cleanup thread, no files to clean')
             time.sleep(5.0)
 
 def process_audio(threadID):
