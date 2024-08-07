@@ -12,7 +12,7 @@ import os
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-print(device)
+voices = dict(default="VoiceClone.wav", tori="ToriNormal.wav", corey="CoreyNormal.wav")
 
 queues = dict(pending=deque(), working=deque(), finished=deque())
 
@@ -34,7 +34,7 @@ def cleanup_files(threadID):
                 else:
                     time.sleep(5.0)
             # sleep for a bit to ensure the file isn't still being streamed
-            time.sleep(10.0)
+            time.sleep(5.0)
             filePath = newJob['id'] + '.wav'
             os.remove(filePath)
         else:
@@ -52,7 +52,13 @@ def process_audio(threadID):
             newJob['status'] = 'working'
             filePath = newJob['id'] + '.wav'
             print('thread ' + str(threadID) + 'picked up new job with id: ' + newJob['id'])
-            ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav="VoiceClone.wav", language="en", file_path=filePath)
+            
+            # Check which voice we should use
+            voiceToUse = voices['default']
+            if newJob['voice'] != "":
+                voiceToUse = voices[newJob['voice']]
+            
+            ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav=voiceToUse, language="en", file_path=filePath)
             newJob['status'] = 'finished'
             queues['working'].remove(newJob)
             queues['finished'].append(newJob)
@@ -84,12 +90,14 @@ threading.Thread(target=cleanup_files, args=(80000,)).start()
 class BaseJob(BaseModel):
     id: str
     _message: str = None
+    voice: str = ""
 
 class JobStatus(BaseModel):
     id: str
     status: str
     _message: str = None
     result: int = -1
+    voice: str = ""
 
 @app.get("/jobs/{id}", response_model=JobStatus, status_code=HTTP_202_ACCEPTED)
 async def read_job(id: str):
@@ -98,8 +106,8 @@ async def read_job(id: str):
     return d
 
 @app.post("/create-job/", response_model=JobStatus, status_code=HTTP_201_CREATED)
-async def create_job(username: str, message: str):
-    _job = dict(id=str(uuid4()), status='pending', _message=message)
+async def create_job(username: str, message: str, voice: str = ""):
+    _job = dict(id=str(uuid4()), status='pending', _message=message, voice=voice)
     # Don't make threads here - have 3-5 permanent worker threads checking the queue
     queues['pending'].append(_job)
     return(_job)
