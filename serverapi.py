@@ -25,11 +25,21 @@ ttsProcessors = [tts, tts2, tts3]
 def cleanup_files(threadID):
     while True:
         if len(queues['finished']) > 0:
+            print('got file to cleanup')
             newJob = queues['finished'].popleft()
+            while True:
+                if newJob['status'] == 'cleanup':
+                    print('file marked as cleanup')
+                    break
+                else:
+                    time.sleep(5.0)
             # sleep for a bit to ensure the file isn't still being streamed
-            time.sleep(20)
+            time.sleep(10.0)
             filePath = newJob['id'] + '.wav'
             os.remove(filePath)
+        else:
+            print('sleeping cleanup thread, no files to clean')
+            time.sleep(5.0)
 
 def process_audio(threadID):
     ttsProcessor = ttsProcessors[int(threadID / 1000)]
@@ -69,7 +79,7 @@ threading.Thread(target=process_audio, args=(2000,)).start()
 threading.Thread(target=process_audio, args=(3000,)).start()
 
 # Create the cleanup thread
-#threading.Thread(target=cleanup_files, args=(80000,)).start()
+threading.Thread(target=cleanup_files, args=(80000,)).start()
 
 class BaseJob(BaseModel):
     id: str
