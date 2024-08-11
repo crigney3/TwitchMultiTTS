@@ -27,11 +27,19 @@ def cleanup_files(threadID):
         if len(queues['cleanup']) > 0:
             print('got file to cleanup')
             newJob = queues['cleanup'].popleft()
+
+            # If the requester never takes their file,
+            # we should eventually delete it
+            # Until that limit, wait for it to be marked as cleanup
+            retryCount = 0
             while True:
                 if newJob['status'] == 'cleanup':
                     print('file marked as cleanup')
                     break
                 else:
+                    retryCount += 1
+                    if retryCount > 20:
+                        break
                     time.sleep(5.0)
             # sleep for a bit to ensure the file isn't still being streamed
             time.sleep(5.0)

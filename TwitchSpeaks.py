@@ -55,10 +55,6 @@ thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS)
 active_tasks = []
 pyautogui.FAILSAFE = False
 
-# This array checks if two threads are processing different messages by the
-# same user
-concurrentUserRequests = []
-
 ##########################################################
 
 # Count down before starting, so you have time to load up the game
@@ -79,6 +75,7 @@ def handle_message(message):
     try:
         msg = message['message'].lower()
         username = message['username'].lower()
+        voice = ""
 
         print("Got this message from " + username + ": " + msg)
 
@@ -92,15 +89,17 @@ def handle_message(message):
           }
         }
 
-        while username in concurrentUserRequests:
-            username = username + '1'
-
-        concurrentUserRequests.append(username)
+        if msg[0] == '!':
+            # Assume this is a command to swap voices
+            split = msg.split()
+            if split[0] == "!":
+                subsplit = split[0].split('!')
+                voice = subsplit[1]
 
         print(username)
 
         #response = requests.post(url, json=TTSData, headers=headers)
-        postResponse = requests.post("http://dionysus.headass.house:8000/create-job/", params={"username": "yakman333", "message": msg})
+        postResponse = requests.post("http://dionysus.headass.house:8000/create-job/", params={"username": "yakman333", "message": msg, "voice": voice})
 
         postResponseData = postResponse.json()
         print(postResponseData)
@@ -140,7 +139,7 @@ def handle_message(message):
         audioResponse = requests.get("http://dionysus.headass.house:8000/get-audio/" + jobId, params={"id": jobId})
 
         #response = requests.get("http://dionysus.headass.house:8000/get-audio", params={"username": "yakman333"})
-        with open(username + '.wav', 'wb') as f:
+        with open(jobId + '.wav', 'wb') as f:
             for chunk in audioResponse.iter_content(chunk_size=CHUNK_SIZE):
                 if chunk:
                     f.write(chunk)
@@ -152,11 +151,8 @@ def handle_message(message):
         print("playsound over")
         os.remove(username + '.wav')
 
-        concurrentUserRequests.remove(username)
-
     except Exception as e:
         print("Encountered exception: " + str(e))
-        concurrentUserRequests.remove(username)
 
 
 # TODO: Add thread that handles playing the sound files as a queue which the messages worker will assign to.
