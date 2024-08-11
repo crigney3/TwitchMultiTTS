@@ -92,11 +92,16 @@ def handle_message(message):
         if msg[0] == '!':
             # Assume this is a command to swap voices
             split = msg.split()
-            if split[0] == "!":
-                subsplit = split[0].split('!')
-                voice = subsplit[1]
+            subsplit = split[0].split('!')
+            voice = subsplit[1]
 
-        print(username)
+            # Now that we have the voice, remove the voice identifier
+            # from the message
+            split.remove(split[0])
+            msg = ' '.join(split)
+
+        print(msg)
+        print(voice)
 
         #response = requests.post(url, json=TTSData, headers=headers)
         postResponse = requests.post("http://dionysus.headass.house:8000/create-job/", params={"username": "yakman333", "message": msg, "voice": voice})
@@ -147,9 +152,9 @@ def handle_message(message):
             #f.close()
 
         print("playsound start")
-        playsound(username + '.wav', True)
+        playsound(jobId + '.wav', True)
         print("playsound over")
-        os.remove(username + '.wav')
+        os.remove(jobId + '.wav')
 
     except Exception as e:
         print("Encountered exception: " + str(e))
