@@ -1,4 +1,10 @@
-from TwitchSpeaks import *
+from TwitchSpeaks import TWITCH_CHANNEL, MAX_WORKERS, STREAMING_ON_TWITCH, MESSAGE_RATE, MAX_QUEUE_LENGTH, handle_message
+import TwitchPlays_Connection
+import concurrent.futures
+import time
+import random
+import pyautogui
+import playsound
 
 globalCharacterList = []
 
@@ -7,6 +13,10 @@ message_queue = []
 thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS)
 active_tasks = []
 pyautogui.FAILSAFE = False
+
+if STREAMING_ON_TWITCH:
+    t = TwitchPlays_Connection.Twitch()
+    t.twitch_connect(TWITCH_CHANNEL)
 
 class Character:
     def __init__(self, name, voice, maxHealth) -> None:
@@ -47,14 +57,13 @@ class Character:
     
     def reset(self):
         self.dice = dict(weapons=4, brawl=4, hot=4, drive=4, stunts=4, wits=4, tech=4, tough=4, sneak=4)
-        self.health = maxHealth
+        self.health = self.maxHealth
 
 character1 = Character("Test One", "dawn", 5)
 character2 = Character("Test Two", "brit", 3)
 
 character1.assignUser("Yakman333")
 character2.assignUser("Yakman333")
-
 
 while True:
 
@@ -86,7 +95,8 @@ while True:
         for message in messages_to_handle:
             if len(active_tasks) <= MAX_WORKERS:
                 for character in globalCharacterList:
-                    if message['username'] == character.assignedUser:
-                        active_tasks.append(thread_pool.submit(handle_message, message))
+                    if message['username'].lower() == character.assignedUser.lower():
+                        print(character.name)
+                        active_tasks.append(thread_pool.submit(handle_message, message, character.voice))
             else:
                 print(f'WARNING: active tasks ({len(active_tasks)}) exceeds number of workers ({MAX_WORKERS}). ({len(message_queue)} messages in the queue)')

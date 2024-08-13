@@ -20,7 +20,12 @@ tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 tts3 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 
+voice1 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice2 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice3 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+
 ttsProcessors = [tts, tts2, tts3]
+ttsVoiceProcess = [voice1, voice2, voice3]
 
 def cleanup_files(threadID):
     while True:
@@ -76,7 +81,7 @@ def process_audio(threadID):
             time.sleep(0.5)
 
 def process_audio_voice(threadID):
-    ttsProcessor = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+    ttsProcessor = ttsVoiceProcess[int(threadID / 10000)]
 
     print("TTS for thread " + str(threadID) + " initialized.")
 
@@ -92,7 +97,8 @@ def process_audio_voice(threadID):
             # Check which voice we should use
             voiceToUse = voices['default']
             if newJob['voice'] != "":
-                voiceToUse = voices[newJob['voice']]
+                if newJob['voice'] in voices:
+                    voiceToUse = voices[newJob['voice']]
             
             ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav=voiceToUse, language="en", file_path=filePath)
             newJob['status'] = 'finished'

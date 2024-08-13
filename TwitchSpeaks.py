@@ -75,11 +75,11 @@ else:
     t = TwitchPlays_Connection.YouTube()
     t.youtube_connect(YOUTUBE_CHANNEL_ID, YOUTUBE_STREAM_URL)
 
-def handle_message(message):
+def handle_message(message, voiceInput = ""):
     try:
         msg = message['message'].lower()
         username = message['username'].lower()
-        voice = ""
+        voice = voiceInput
 
         # Check if there's a link in this message,
         # And don't read it if so
@@ -128,16 +128,16 @@ def handle_message(message):
             jobStatusData = jobStatus.json()
             if jobStatusData['status'] == 'finished':
                 break
-            elif jobStatusData['status'] == 'pending':
-                print("Job is still pending - are messages very backed up?")
-                time.sleep(sleepLength)
+            elif jobStatusData['status'] == 'pending' or jobStatusData['status'] == 'pendingVoice':
+                print("Job is still pending - messages are very backed up or this is a voice message while voices are still initializing")
+                time.sleep(3.0)
                 retryCount += 1
             elif jobStatusData['status'] == 'working':
                 # If the job is still working, sleep for a bit
                 time.sleep(1.0)
                 retryCount += 1
             else:
-                raise Exception("Got bad status code, check server for issues")
+                raise Exception("Got bad status code at " + jobStatusData['status'] + ", check server for issues")
         
         if retryCount > 40:
             raise Exception("Too many retries!")
@@ -160,40 +160,36 @@ def handle_message(message):
     except Exception as e:
         print("Encountered exception: " + str(e))
 
-
-# TODO: Add thread that handles playing the sound files as a queue which the messages worker will assign to.
-# Could maybe also handle the TTS request, which would provide tracking and pacing of sending the requests so no more than 2 are ever active
-# Queue response thread can check if it's currently processing a message by username and not process the next one by username until it's finished
-
-while True:
-
-    active_tasks = [t for t in active_tasks if not t.done()]
-
-    #Check for new messages
-    new_messages = t.twitch_receive_messages();
-    if new_messages:
-        message_queue += new_messages; # New messages are added to the back of the queue
-        message_queue = message_queue[-MAX_QUEUE_LENGTH:] # Shorten the queue to only the most recent X messages
-
-    messages_to_handle = []
-    if not message_queue:
-        # No messages in the queue
-        last_time = time.time()
-    else:
-        # Determine how many messages we should handle now
-        r = 1 if MESSAGE_RATE == 0 else (time.time() - last_time) / MESSAGE_RATE
-        n = int(r * len(message_queue))
-        if n > 0:
-            # Pop the messages we want off the front of the queue
-            messages_to_handle = message_queue[0:n]
-            del message_queue[0:n]
-            last_time = time.time();
-
-    if not messages_to_handle:
-        continue
-    else:
-        for message in messages_to_handle:
-            if len(active_tasks) <= MAX_WORKERS:
-                active_tasks.append(thread_pool.submit(handle_message, message))
-            else:
-                print(f'WARNING: active tasks ({len(active_tasks)}) exceeds number of workers ({MAX_WORKERS}). ({len(message_queue)} messages in the queue)')
+def scan_messages():
+    while True:
+    
+        active_tasks = [t for t in active_tasks if not t.done()]
+    
+        #Check for new messages
+        new_messages = t.twitch_receive_messages();
+        if new_messages:
+            message_queue += new_messages; # New messages are added to the back of the queue
+            message_queue = message_queue[-MAX_QUEUE_LENGTH:] # Shorten the queue to only the most recent X messages
+    
+        messages_to_handle = []
+        if not message_queue:
+            # No messages in the queue
+            last_time = time.time()
+        else:
+            # Determine how many messages we should handle now
+            r = 1 if MESSAGE_RATE == 0 else (time.time() - last_time) / MESSAGE_RATE
+            n = int(r * len(message_queue))
+            if n > 0:
+                # Pop the messages we want off the front of the queue
+                messages_to_handle = message_queue[0:n]
+                del message_queue[0:n]
+                last_time = time.time();
+    
+        if not messages_to_handle:
+            continue
+        else:
+            for message in messages_to_handle:
+                if len(active_tasks) <= MAX_WORKERS:
+                    active_tasks.append(thread_pool.submit(handle_message, message))
+                else:
+                    print(f'WARNING: active tasks ({len(active_tasks)}) exceeds number of workers ({MAX_WORKERS}). ({len(message_queue)} messages in the queue)')
