@@ -12,15 +12,20 @@ import os
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-voices = dict(default="VoiceClone.wav", tori="ToriNormal.wav", corey="CoreyNormal.wav")
+voices = dict(default="VoiceClone.wav", dawn="ToriNormal.wav", corey="CoreyNormal.wav", brit="VoiceClone.wav")
 
-queues = dict(pending=deque(), working=deque(), finished=deque(), cleanup=deque())
+queues = dict(pending=deque(), pendingVoice=deque(), working=deque(), finished=deque(), cleanup=deque())
 
 tts = TTS("tts_models/en/ljspeech/glow-tts").to(device)
 tts2 = TTS("tts_models/en/ljspeech/glow-tts").to(device)
 tts3 = TTS("tts_models/en/ljspeech/glow-tts").to(device)
 
+voice1 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice2 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice3 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+
 ttsProcessors = [tts, tts2, tts3]
+ttsVoiceProcessors = [voice1, voice2, voice3]
 
 def cleanup_files(threadID):
     while True:
@@ -55,6 +60,33 @@ def process_audio(threadID):
         if len(queues['pending']) > 0:
             # pop left side with append right means oldest first
             newJob = queues['pending'].popleft()
+
+            # Check if this is a voiced message, and if so
+            # pass it off to the other tts processor type
+            voiceToUse = voices['default']
+            if newJob['voice'] != "":
+                queues['pendingVoice'].append(newJob)
+            else:
+                queues['working'].append(newJob)
+                newJob['status'] = 'working'
+                filePath = newJob['id'] + '.wav'
+                print('thread ' + str(threadID) + 'picked up new job with id: ' + newJob['id'])
+
+                ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav=voiceToUse, file_path=filePath)
+                newJob['status'] = 'finished'
+                queues['working'].remove(newJob)
+                queues['finished'].append(newJob)
+                print('File processed')
+        else:
+            time.sleep(0.5)
+
+def process_audio_voice(threadID):
+    ttsProcessor = ttsVoiceProcessors[int(threadID / 10000)]
+
+    while True:
+        if len(queues['pendingVoice']) > 0:
+            # pop left side with append right means oldest first
+            newJob = queues['pendingVoice'].popleft()
             queues['working'].append(newJob)
             newJob['status'] = 'working'
             filePath = newJob['id'] + '.wav'
@@ -73,7 +105,7 @@ def process_audio(threadID):
         else:
             time.sleep(0.5)
 
-def get_job(id: str, queue: str = None, order=['finished', 'working', 'pending']):
+def get_job(id: str, queue: str = None, order=['finished', 'working', 'pendingVoice', 'pending']):
     _id = str(id)
 
     for queue in order:
@@ -86,10 +118,15 @@ def get_job(id: str, queue: str = None, order=['finished', 'working', 'pending']
 
 app = FastAPI()
 
-# Create the audio processor threads
+# Create the basic audio processor threads
 threading.Thread(target=process_audio, args=(1000,)).start()
 threading.Thread(target=process_audio, args=(2000,)).start()
 threading.Thread(target=process_audio, args=(3000,)).start()
+
+# Create the voiced audio processor threads
+threading.Thread(target=process_audio_voice, args=(10000,)).start()
+threading.Thread(target=process_audio_voice, args=(20000,)).start()
+threading.Thread(target=process_audio_voice, args=(30000,)).start()
 
 # Create the cleanup thread
 threading.Thread(target=cleanup_files, args=(80000,)).start()

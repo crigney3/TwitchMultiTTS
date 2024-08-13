@@ -111,11 +111,11 @@ def handle_message(message):
         print(postResponseData)
         jobId = postResponseData['id']
 
-        # TTS seems to take a min of 2 seconds to process.
-        # Basic guess is that it takes another second per 20 characters.
+        # TTS seems to take a min of 0.3 seconds to process.
+        # Basic guess is that it takes another 0.5 seconds per 20 characters.
         # This sleep keeps the script from spamming the server to check if its
         # file is ready yet.
-        sleepLength = float(2 + (len(msg) / 10))
+        sleepLength = float(0.3 + ((len(msg) / 20) / 2))
         print("sleeping for: " + str(sleepLength))
         time.sleep(sleepLength)
 
