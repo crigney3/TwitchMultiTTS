@@ -16,9 +16,9 @@ voices = dict(default="VoiceClone.wav", tori="ToriNormal.wav", corey="CoreyNorma
 
 queues = dict(pending=deque(), working=deque(), finished=deque(), cleanup=deque())
 
-tts = TTS("tts_models/multilingual/en/speedy-speech").to(device)
-tts2 = TTS("tts_models/multilingual/en/speedy-speech").to(device)
-tts3 = TTS("tts_models/multilingual/en/speedy-speech").to(device)
+tts = TTS("tts_models/en/ljspeech/glow-tts").to(device)
+tts2 = TTS("tts_models/en/ljspeech/glow-tts").to(device)
+tts3 = TTS("tts_models/en/ljspeech/glow-tts").to(device)
 
 ttsProcessors = [tts, tts2, tts3]
 
@@ -65,7 +65,7 @@ def process_audio(threadID):
             if newJob['voice'] != "":
                 voiceToUse = voices[newJob['voice']]
             
-            ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav=voiceToUse, language="en", file_path=filePath)
+            ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav=voiceToUse, file_path=filePath)
             newJob['status'] = 'finished'
             queues['working'].remove(newJob)
             queues['finished'].append(newJob)
