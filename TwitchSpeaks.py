@@ -4,6 +4,7 @@ import pyautogui
 import requests
 from playsound import playsound
 import os
+import re
 import TwitchPlays_Connection
 from TwitchPlays_KeyCodes import *
 
@@ -55,6 +56,9 @@ thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS)
 active_tasks = []
 pyautogui.FAILSAFE = False
 
+# Too general, maybe just have a bot remove all links in chat?
+linkRegex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+
 ##########################################################
 
 # Count down before starting, so you have time to load up the game
@@ -77,17 +81,14 @@ def handle_message(message):
         username = message['username'].lower()
         voice = ""
 
-        print("Got this message from " + username + ": " + msg)
+        # Check if there's a link in this message,
+        # And don't read it if so
+        url = re.findall(linkRegex, msg)
+        print(url)
+        if str(url) != "[]":
+            return
 
-        # Deprecated
-        TTSData = {
-          "text": msg,
-          "model_id": "eleven_multilingual_v2",
-          "voice_settings": {
-            "stability": 0.5,
-            "similarity_boost": 0.5
-          }
-        }
+        print("Got this message from " + username + ": " + msg)
 
         if msg[0] == '!':
             # Assume this is a command to swap voices
