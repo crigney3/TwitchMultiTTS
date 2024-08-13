@@ -16,9 +16,9 @@ voices = dict(default="VoiceClone.wav", tori="ToriNormal.wav", corey="CoreyNorma
 
 queues = dict(pending=deque(), working=deque(), finished=deque(), cleanup=deque())
 
-tts = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-tts2 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-tts3 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+tts = TTS("tts_models/multilingual/en/speedy-speech").to(device)
+tts2 = TTS("tts_models/multilingual/en/speedy-speech").to(device)
+tts3 = TTS("tts_models/multilingual/en/speedy-speech").to(device)
 
 ttsProcessors = [tts, tts2, tts3]
 
