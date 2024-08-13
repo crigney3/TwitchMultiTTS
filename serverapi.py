@@ -16,16 +16,11 @@ voices = dict(default="VoiceClone.wav", dawn="ToriNormal.wav", corey="CoreyNorma
 
 queues = dict(pending=deque(), pendingVoice=deque(), working=deque(), finished=deque(), cleanup=deque())
 
-tts = TTS("tts_models/en/ljspeech/glow-tts").to(device)
-tts2 = TTS("tts_models/en/ljspeech/glow-tts").to(device)
-tts3 = TTS("tts_models/en/ljspeech/glow-tts").to(device)
-
-voice1 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-voice2 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-voice3 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts3 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 
 ttsProcessors = [tts, tts2, tts3]
-ttsVoiceProcessors = [voice1, voice2, voice3]
 
 def cleanup_files(threadID):
     while True:
@@ -81,7 +76,9 @@ def process_audio(threadID):
             time.sleep(0.5)
 
 def process_audio_voice(threadID):
-    ttsProcessor = ttsVoiceProcessors[int(threadID / 10000)]
+    ttsProcessor = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+
+    print("TTS for thread " + str(threadID) + " initialized.")
 
     while True:
         if len(queues['pendingVoice']) > 0:
