@@ -72,7 +72,7 @@ def process_audio(threadID):
                 filePath = newJob['id'] + '.wav'
                 print('thread ' + str(threadID) + 'picked up new job with id: ' + newJob['id'])
 
-                ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav=voiceToUse, language="en", file_path=filePath)
+                ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav=voiceToUse, file_path=filePath)
                 newJob['status'] = 'finished'
                 queues['working'].remove(newJob)
                 queues['finished'].append(newJob)
@@ -97,7 +97,7 @@ def process_audio_voice(threadID):
             if newJob['voice'] != "":
                 voiceToUse = voices[newJob['voice']]
             
-            ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav=voiceToUse, file_path=filePath)
+            ttsProcessor.tts_to_file(text=newJob['_message'], speaker_wav=voiceToUse, language="en", file_path=filePath)
             newJob['status'] = 'finished'
             queues['working'].remove(newJob)
             queues['finished'].append(newJob)
