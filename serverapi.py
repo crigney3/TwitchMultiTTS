@@ -16,6 +16,9 @@ voices = dict(default="VoiceClone.wav", dawn="ToriNormal.wav", corey="CoreyNorma
 
 queues = dict(pending=deque(), pendingVoice=deque(), working=deque(), finished=deque(), cleanup=deque())
 
+activeUsernames = []
+lastActiveUsernameMessage = dict()
+
 tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 tts3 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
@@ -104,6 +107,12 @@ def process_audio_voice(threadID):
             newJob['status'] = 'finished'
             queues['working'].remove(newJob)
             queues['finished'].append(newJob)
+
+            # Check if this text should be saved for the current
+            # active username
+            if newJob['_username'] in activeUsernames:
+                lastActiveUsernameMessage[newJob['_username']] = newJob['_message']
+
             print('File processed')
         else:
             time.sleep(0.5)
@@ -113,11 +122,17 @@ def get_job(id: str, queue: str = None, order=['finished', 'working', 'pendingVo
 
     for queue in order:
         for job in queues[queue]:
-            print(job['id'])
             if str(job['id']) == _id:
                 return job, queue
 
     return 'not found', None # Don't let it reach this point
+
+def get_finished_job_by_username(user: str):
+    for job in queues['finished']:
+        if job['_username'] == user:
+            return job
+
+    return 'not found' "Don't let it reach this point"
 
 app = FastAPI()
 
@@ -138,6 +153,7 @@ class BaseJob(BaseModel):
     id: str
     _message: str = None
     voice: str = ""
+    _username: str = None
 
 class JobStatus(BaseModel):
     id: str
@@ -145,6 +161,7 @@ class JobStatus(BaseModel):
     _message: str = None
     result: int = -1
     voice: str = ""
+    _username: str = None
 
 @app.get("/jobs/{id}", response_model=JobStatus, status_code=HTTP_202_ACCEPTED)
 async def read_job(id: str):
@@ -173,10 +190,31 @@ def audioById(id: str):
     queues['cleanup'].append(job)
     return FileResponse(path=filePath, filename=filePath, media_type='text/wav')
 
+@app.post("/set-username/", status_code=HTTP_201_CREATED)
+async def set_username_as_active(username: str):
+    activeUsernames.append(username)
+
+@app.post("/remove-username/", status_code=HTTP_201_CREATED)
+async def remove_username_as_active(username: str):
+    lastActiveUsernameMessage.pop(username)
+    activeUsernames.remove(username)
+
+@app.post("/clear-usernames/", status_code=HTTP_201_CREATED)
+async def clear_active_usernames():
+    lastActiveUsernameMessage.clear()
+    activeUsernames.clear()
+
+@app.post("/get-text/")
+async def get_text_for_active_username(username: str):
+    if username in activeUsernames:
+        return {"Message": lastActiveUsernameMessage[username]}
+
+# Deprecated
 @app.get("/get-audio")
 def audio(username: str):
     return FileResponse(path=username + '.wav', filename=username + '.wav', media_type='text/wav')
 
+# Deprecated
 @app.post("/send-text")
 async def queue_text(username: str, message: str):
     tts.tts_to_file(text=message, speaker_wav="VoiceClone.wav", language="en", file_path=username + '.wav')
