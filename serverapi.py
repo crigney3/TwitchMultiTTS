@@ -90,6 +90,8 @@ def process_audio(threadID):
 def process_audio_voice(threadID):
     ttsProcessor = ttsVoiceProcess[int(threadID / 10000)]
 
+    time.sleep(20.0)
+
     print("TTS for thread " + str(threadID) + " initialized.")
 
     while True:
