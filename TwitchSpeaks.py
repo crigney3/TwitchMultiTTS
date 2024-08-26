@@ -5,6 +5,7 @@ import requests
 from playsound import playsound
 import os
 import re
+import sys
 import TwitchPlays_Connection
 from TwitchPlays_KeyCodes import *
 
@@ -50,10 +51,6 @@ headers = {
   "xi-api-key": "sk_af4a39d82eea6f20d5d30723168cf529172c9593251c6217"
 }
 
-last_time = time.time()
-message_queue = []
-thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS)
-active_tasks = []
 pyautogui.FAILSAFE = False
 
 # Too general, maybe just have a bot remove all links in chat?
@@ -161,16 +158,21 @@ def handle_message(message, voiceInput = ""):
         print("Encountered exception: " + str(e))
 
 def scan_messages():
+    last_time = time.time()
+    message_queue = []
+    thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS)
+    active_tasks = []
+
     while True:
-    
+
         active_tasks = [t for t in active_tasks if not t.done()]
-    
+
         #Check for new messages
         new_messages = t.twitch_receive_messages();
         if new_messages:
             message_queue += new_messages; # New messages are added to the back of the queue
             message_queue = message_queue[-MAX_QUEUE_LENGTH:] # Shorten the queue to only the most recent X messages
-    
+
         messages_to_handle = []
         if not message_queue:
             # No messages in the queue
@@ -184,7 +186,7 @@ def scan_messages():
                 messages_to_handle = message_queue[0:n]
                 del message_queue[0:n]
                 last_time = time.time();
-    
+
         if not messages_to_handle:
             continue
         else:
@@ -193,3 +195,6 @@ def scan_messages():
                     active_tasks.append(thread_pool.submit(handle_message, message))
                 else:
                     print(f'WARNING: active tasks ({len(active_tasks)}) exceeds number of workers ({MAX_WORKERS}). ({len(message_queue)} messages in the queue)')
+
+if sys.argv[1] == "-all":
+    scan_messages()

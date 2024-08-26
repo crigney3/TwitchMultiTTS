@@ -9,6 +9,8 @@ from starlette.status import HTTP_201_CREATED, HTTP_202_ACCEPTED
 import threading
 import time
 import os
+import asyncio
+import websockets
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -18,6 +20,8 @@ queues = dict(pending=deque(), pendingVoice=deque(), working=deque(), finished=d
 
 activeUsernames = []
 lastActiveUsernameMessage = dict()
+
+textConnections = set()
 
 tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
@@ -204,10 +208,27 @@ async def clear_active_usernames():
     lastActiveUsernameMessage.clear()
     activeUsernames.clear()
 
-@app.post("/get-text/")
+@app.get("/get-text/{username}")
 async def get_text_for_active_username(username: str):
     if username in activeUsernames:
         return {"Message": lastActiveUsernameMessage[username]}
+    else:
+        return {"Message": ""}
+    
+# Experimental websockets for text
+async def websocket_handler(websocket, path):
+    if websocket not in textConnections:
+        textConnections.add(websocket)
+    data = await websocket.recv()
+    reply = ""
+    if data.username in activeUsernames:
+        reply = lastActiveUsernameMessage[username]
+    await websocket.send(reply)
+
+start_server = websockets.serve(websocket_handler, "localhost", 8001)
+
+asyncio.get_event_loop().run_until_complete(start_server)
+asyncio.get_event_loop().run_forever()
 
 # Deprecated
 @app.get("/get-audio")
