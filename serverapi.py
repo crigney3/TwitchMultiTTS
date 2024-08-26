@@ -9,8 +9,8 @@ from starlette.status import HTTP_201_CREATED, HTTP_202_ACCEPTED
 import threading
 import time
 import os
-import asyncio
-import websockets
+# import asyncio
+# import websockets
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -21,7 +21,7 @@ queues = dict(pending=deque(), pendingVoice=deque(), working=deque(), finished=d
 activeUsernames = []
 lastActiveUsernameMessage = dict()
 
-textConnections = set()
+# textConnections = set()
 
 tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
@@ -61,6 +61,7 @@ def cleanup_files(threadID):
             time.sleep(5.0)
 
 def process_audio(threadID):
+    time.sleep(5.0)
     ttsProcessor = ttsProcessors[int(threadID / 1000)]
 
     while True:
@@ -88,9 +89,8 @@ def process_audio(threadID):
             time.sleep(0.5)
 
 def process_audio_voice(threadID):
+    time.sleep(25.0)
     ttsProcessor = ttsVoiceProcess[int(threadID / 10000)]
-
-    time.sleep(20.0)
 
     print("TTS for thread " + str(threadID) + " initialized.")
 
@@ -218,19 +218,19 @@ async def get_text_for_active_username(username: str):
         return {"Message": ""}
     
 # Experimental websockets for text
-async def websocket_handler(websocket, path):
-    if websocket not in textConnections:
-        textConnections.add(websocket)
-    data = await websocket.recv()
-    reply = ""
-    if data.username in activeUsernames:
-        reply = lastActiveUsernameMessage[username]
-    await websocket.send(reply)
+# async def websocket_handler(websocket, path):
+#     if websocket not in textConnections:
+#         textConnections.add(websocket)
+#     data = await websocket.recv()
+#     reply = ""
+#     if data.username in activeUsernames:
+#         reply = lastActiveUsernameMessage[username]
+#     await websocket.send(reply)
 
-start_server = websockets.serve(websocket_handler, "localhost", 8001)
+# start_server = websockets.serve(websocket_handler, "localhost", 8001)
 
-asyncio.get_event_loop().run_until_complete(start_server)
-asyncio.get_event_loop().run_forever()
+# asyncio.get_event_loop().run_until_complete(start_server)
+# asyncio.get_event_loop().run_forever()
 
 # Deprecated
 @app.get("/get-audio")
