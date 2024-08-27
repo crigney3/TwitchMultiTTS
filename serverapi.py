@@ -115,8 +115,8 @@ def process_audio_voice(threadID):
 
             # Check if this text should be saved for the current
             # active username
-            if newJob['_username'] in activeUsernames:
-                lastActiveUsernameMessage[newJob['_username']] = newJob['_message']
+            if newJob['_username'].lower() in activeUsernames:
+                lastActiveUsernameMessage[newJob['_username'].lower()] = newJob['_message']
 
             print('File processed')
         else:
@@ -186,7 +186,7 @@ async def read_job(id: str):
 
 @app.post("/create-job/", response_model=JobStatus, status_code=HTTP_201_CREATED)
 async def create_job(username: str, message: str, voice: str = ""):
-    _job = dict(id=str(uuid4()), status='pending', _message=message, voice=voice, _username=username)
+    _job = dict(id=str(uuid4()), status='pending', _message=message, voice=voice, _username=username.lower())
     # Don't make threads here - have 3-5 permanent worker threads checking the queue
     queues['pending'].append(_job)
     return(_job)
@@ -207,12 +207,12 @@ def audioById(id: str):
 
 @app.post("/set-username/", status_code=HTTP_201_CREATED)
 async def set_username_as_active(username: str):
-    activeUsernames.append(username)
+    activeUsernames.append(username.lower())
 
 @app.post("/remove-username/", status_code=HTTP_201_CREATED)
 async def remove_username_as_active(username: str):
-    lastActiveUsernameMessage.pop(username)
-    activeUsernames.remove(username)
+    lastActiveUsernameMessage.pop(username.lower())
+    activeUsernames.remove(username.lower())
 
 @app.post("/clear-usernames/", status_code=HTTP_201_CREATED)
 async def clear_active_usernames():
@@ -221,9 +221,9 @@ async def clear_active_usernames():
 
 @app.get("/get-text/{username}")
 async def get_text_for_active_username(username: str):
-    if username in activeUsernames:
-        if username in lastActiveUsernameMessage:
-            return {"Message": lastActiveUsernameMessage[username]}
+    if username.lower() in activeUsernames:
+        if username.lower() in lastActiveUsernameMessage:
+            return {"Message": lastActiveUsernameMessage[username.lower()]}
         else:
             return {"Message": ""}
     else:
