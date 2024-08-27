@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.responses import FileResponse
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import torch
 from TTS.api import TTS
@@ -141,6 +142,16 @@ def get_finished_job_by_username(user: str):
     return 'not found' "Don't let it reach this point"
 
 app = FastAPI()
+
+# Solve CORS errors and up security by defining what can access the server
+# But I don't think I can add my desktop as a specific domain, so I guess it's wildcard time
+# In future, update to allow_origins_regex with some pattern matching Dionysus
+
+app.add_middleware(CORSMiddleware,
+                   allow_origins=["*"],
+                   allow_credentials=True,
+                   allow_methods=["*"],
+                   allow_headers=["*"])
 
 # Create the basic audio processor threads
 threading.Thread(target=process_audio, args=(1000,)).start()
