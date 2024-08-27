@@ -62,8 +62,7 @@ def cleanup_files(threadID):
             time.sleep(5.0)
 
 def process_audio(threadID):
-    time.sleep(5.0)
-    ttsProcessor = ttsProcessors[int(threadID / 1000)]
+    ttsProcessor = ttsProcessors[int(threadID / 1000) - 1]
 
     while True:
         if len(queues['pending']) > 0:
@@ -90,8 +89,7 @@ def process_audio(threadID):
             time.sleep(0.5)
 
 def process_audio_voice(threadID):
-    time.sleep(25.0)
-    ttsProcessor = ttsVoiceProcess[int(threadID / 10000)]
+    ttsProcessor = ttsVoiceProcess[int(threadID / 10000) - 1]
 
     print("TTS for thread " + str(threadID) + " initialized.")
 
@@ -224,7 +222,10 @@ async def clear_active_usernames():
 @app.get("/get-text/{username}")
 async def get_text_for_active_username(username: str):
     if username in activeUsernames:
-        return {"Message": lastActiveUsernameMessage[username]}
+        if username in lastActiveUsernameMessage:
+            return {"Message": lastActiveUsernameMessage[username]}
+        else:
+            return {"Message": ""}
     else:
         return {"Message": ""}
     
