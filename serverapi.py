@@ -186,7 +186,7 @@ async def read_job(id: str):
 
 @app.post("/create-job/", response_model=JobStatus, status_code=HTTP_201_CREATED)
 async def create_job(username: str, message: str, voice: str = ""):
-    _job = dict(id=str(uuid4()), status='pending', _message=message, voice=voice)
+    _job = dict(id=str(uuid4()), status='pending', _message=message, voice=voice, _username=username)
     # Don't make threads here - have 3-5 permanent worker threads checking the queue
     queues['pending'].append(_job)
     return(_job)
