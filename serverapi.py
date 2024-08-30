@@ -140,19 +140,19 @@ def get_finished_job_by_username(user: str):
     return 'not found' "Don't let it reach this point"
 
 # Experimental websockets for text
-async def websocket_handler(websocket, path):
-    if websocket not in textConnections:
-        textConnections.add(websocket)
-    data = await websocket.recv()
+async def socket_handler(socket):
+    if socket not in textConnections:
+        textConnections.add(socket)
+    data = await socket.recv()
     reply = ""
     if data.username.lower() in activeUsernames:
         reply = lastActiveUsernameMessage[data.username.lower()]
-    await websocket.send(reply)
+    await socket.send(reply)
 
-def websocketThread(id: str):
+def socketThread(id: str):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
-    start_server = websockets.serve(websocket_handler, "localhost", 8051)
+    start_server = websockets.serve(socket_handler, "localhost", 8051)
 
     asyncio.get_event_loop().run_until_complete(start_server)
     asyncio.get_event_loop().run_forever()
@@ -175,15 +175,15 @@ threading.Thread(target=process_audio, args=(2000,)).start()
 threading.Thread(target=process_audio, args=(3000,)).start()
 
 # Create the voiced audio processor threads
-threading.Thread(target=process_audio_voice, args=(10000,)).start()
-threading.Thread(target=process_audio_voice, args=(20000,)).start()
-threading.Thread(target=process_audio_voice, args=(30000,)).start()
+# threading.Thread(target=process_audio_voice, args=(10000,)).start()
+# threading.Thread(target=process_audio_voice, args=(20000,)).start()
+# threading.Thread(target=process_audio_voice, args=(30000,)).start()
 
 # Create the cleanup thread
 threading.Thread(target=cleanup_files, args=(80000,)).start()
 
 # Create the text-passing websocket thread
-threading.Thread(target=websocketThread, args=(90000,)).start()
+threading.Thread(target=socketThread, args=(90000,)).start()
 
 class BaseJob(BaseModel):
     id: str
