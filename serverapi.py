@@ -153,6 +153,9 @@ async def websocketThread(id: str):
     async with websockets.serve(websocket_handler, "localhost", 8051):
         await asyncio.Future()
 
+async def websocketThreadStarter(id: str):
+    asyncio.run(websocketThread(id))
+
 app = FastAPI()
 
 # Solve CORS errors and up security by defining what can access the server
@@ -179,7 +182,7 @@ threading.Thread(target=process_audio_voice, args=(30000,)).start()
 threading.Thread(target=cleanup_files, args=(80000,)).start()
 
 # Create the text-passing websocket thread
-threading.Thread(target=websocketThread, args=(90000,)).start()
+threading.Thread(target=websocketThreadStarter, args=(90000,)).start()
 
 class BaseJob(BaseModel):
     id: str
