@@ -28,9 +28,9 @@ tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 tts3 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 
-voice1 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-voice2 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-voice3 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice1 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice2 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice3 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 
 ttsProcessors = [tts, tts2, tts3]
 ttsVoiceProcess = [voice1, voice2, voice3]
@@ -150,12 +150,11 @@ async def socket_handler(socket):
     await socket.send(reply)
 
 def socketThread(id: str):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(loop)
     start_server = websockets.serve(socket_handler, "localhost", 8051)
 
-    asyncio.get_event_loop().run_until_complete(start_server)
-    asyncio.get_event_loop().run_forever()
+    asyncio.run(start_server)
 
 app = FastAPI()
 
