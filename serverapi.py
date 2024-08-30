@@ -150,11 +150,10 @@ async def websocket_handler(websocket, path):
     await websocket.send(reply)
 
 async def websocketThread(id: str):
-    async with websockets.serve(websocket_handler, "localhost", 8051):
-        await asyncio.Future()
+    start_server =  websockets.serve(websocket_handler, "localhost", 8051)
 
-async def websocketThreadStarter(id: str):
-    asyncio.run(websocketThread(id))
+    asyncio.get_event_loop().run_until_complete(start_server)
+    asyncio.get_event_loop().run_forever()
 
 app = FastAPI()
 
@@ -182,7 +181,7 @@ threading.Thread(target=process_audio_voice, args=(30000,)).start()
 threading.Thread(target=cleanup_files, args=(80000,)).start()
 
 # Create the text-passing websocket thread
-threading.Thread(target=websocketThreadStarter, args=(90000,)).start()
+threading.Thread(target=websocketThread, args=(90000,)).start()
 
 class BaseJob(BaseModel):
     id: str
