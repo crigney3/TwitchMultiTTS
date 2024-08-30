@@ -141,6 +141,9 @@ def get_finished_job_by_username(user: str):
 
 # Experimental websockets for text
 async def socket_handler(socket):
+    print(" ")
+    print("Websocket active!")
+    print(" ")
     if socket not in textConnections:
         textConnections.add(socket)
     data = await socket.recv()
@@ -157,9 +160,11 @@ def socketThread(id: str):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    time.sleep(10)
+    time.sleep(5)
     
     asyncio.run(socketStarter())
+
+    print("We shouldn't have reached here")
 
 app = FastAPI()
 
