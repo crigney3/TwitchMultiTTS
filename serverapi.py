@@ -24,9 +24,9 @@ lastActiveUsernameMessage = dict()
 
 textConnections = set()
 
-tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
-tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
-tts3 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts = ""#TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts2 = ""#TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts3 = ""#TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 
 voice1 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 voice2 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
@@ -153,12 +153,15 @@ async def socket_handler(socket):
     await socket.send(reply)
 
 async def socketStarter():
+    print(" ")
+    print("socket starter reached!")
+    print(" ")
     async with websockets.serve(socket_handler, "localhost", 8051):
         await asyncio.get_running_loop().create_future()
 
 def socketThread(id: str):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
+    # loop = asyncio.new_event_loop()
+    # asyncio.set_event_loop(loop)
 
     time.sleep(5)
     
@@ -179,9 +182,9 @@ app.add_middleware(CORSMiddleware,
                    allow_headers=["*"])
 
 # Create the basic audio processor threads
-threading.Thread(target=process_audio, args=(1000,)).start()
-threading.Thread(target=process_audio, args=(2000,)).start()
-threading.Thread(target=process_audio, args=(3000,)).start()
+# threading.Thread(target=process_audio, args=(1000,)).start()
+# threading.Thread(target=process_audio, args=(2000,)).start()
+# threading.Thread(target=process_audio, args=(3000,)).start()
 
 # Create the voiced audio processor threads
 # threading.Thread(target=process_audio_voice, args=(10000,)).start()
