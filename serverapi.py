@@ -159,12 +159,12 @@ async def socketStarter():
     print(" ")
     print("socket starter reached!")
     print(" ")
-    start_server = websockets.server.serve(socket_handler, "localhost", 8051)
+    # start_server = websockets.server.serve(socket_handler, "localhost", 8051)
 
-    asyncio.get_running_loop().run_until_complete(start_server)
-    asyncio.get_running_loop().run_forever()
-    # async with websockets.serve(socket_handler, "localhost", 8051):
-    #     await asyncio.get_running_loop().create_future()
+    # asyncio.get_running_loop().run_until_complete(start_server)
+    # asyncio.get_running_loop().run_forever()
+    async with websockets.server.serve(socket_handler, "localhost", 8051):
+        await asyncio.get_running_loop().run_forever()
 
 def socketThread(id: str):
     asyncio.run(socketStarter())
