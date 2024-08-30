@@ -145,12 +145,14 @@ async def websocket_handler(websocket, path):
         textConnections.add(websocket)
     data = await websocket.recv()
     reply = ""
-    if data.username in activeUsernames:
-        reply = lastActiveUsernameMessage[username]
+    if data.username.lower() in activeUsernames:
+        reply = lastActiveUsernameMessage[data.username.lower()]
     await websocket.send(reply)
 
-async def websocketThread(id: str):
-    start_server =  websockets.serve(websocket_handler, "localhost", 8051)
+def websocketThread(id: str):
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    start_server = websockets.serve(websocket_handler, "localhost", 8051)
 
     asyncio.get_event_loop().run_until_complete(start_server)
     asyncio.get_event_loop().run_forever()
