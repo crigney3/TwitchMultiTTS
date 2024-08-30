@@ -149,7 +149,7 @@ async def websocket_handler(websocket, path):
         reply = lastActiveUsernameMessage[username]
     await websocket.send(reply)
 
-async def websocketThread():
+async def websocketThread(id: str):
     async with websockets.serve(websocket_handler, "localhost", 8051):
         await asyncio.Future()
 
