@@ -149,12 +149,17 @@ async def socket_handler(socket):
         reply = lastActiveUsernameMessage[data.username.lower()]
     await socket.send(reply)
 
+async def socketStarter():
+    start_server = websockets.serve(socket_handler, "localhost", 8051)
+    await start_server()
+
 def socketThread(id: str):
     loop = asyncio.new_event_loop()
     asyncio.set_event_loop(loop)
 
-    asyncio.get_event_loop().run_until_complete(websockets.serve(socket_handler, "localhost", 8051))
-    asyncio.get_event_loop().run_forever()
+    time.sleep(10)
+    
+    asyncio.run(socketStarter())
 
 app = FastAPI()
 
