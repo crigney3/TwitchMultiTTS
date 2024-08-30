@@ -10,8 +10,8 @@ from starlette.status import HTTP_201_CREATED, HTTP_202_ACCEPTED
 import threading
 import time
 import os
-# import asyncio
-# import websockets
+import asyncio
+import websockets
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -139,6 +139,20 @@ def get_finished_job_by_username(user: str):
 
     return 'not found' "Don't let it reach this point"
 
+# Experimental websockets for text
+async def websocket_handler(websocket, path):
+    if websocket not in textConnections:
+        textConnections.add(websocket)
+    data = await websocket.recv()
+    reply = ""
+    if data.username in activeUsernames:
+        reply = lastActiveUsernameMessage[username]
+    await websocket.send(reply)
+
+async def websocketThread():
+    async with websockets.serve(websocket_handler, "localhost", 8051):
+        await asyncio.Future()
+
 app = FastAPI()
 
 # Solve CORS errors and up security by defining what can access the server
@@ -163,6 +177,9 @@ threading.Thread(target=process_audio_voice, args=(30000,)).start()
 
 # Create the cleanup thread
 threading.Thread(target=cleanup_files, args=(80000,)).start()
+
+# Create the text-passing websocket thread
+threading.Thread(target=websocketThread, args=(90000,)).start()
 
 class BaseJob(BaseModel):
     id: str
@@ -211,35 +228,26 @@ async def set_username_as_active(username: str):
 
 @app.post("/remove-username/", status_code=HTTP_201_CREATED)
 async def remove_username_as_active(username: str):
-    lastActiveUsernameMessage.pop(username.lower())
-    activeUsernames.remove(username.lower())
+    if username.lower() in lastActiveUsernameMessage:
+        lastActiveUsernameMessage.pop(username.lower())
+
+    if username.lower() in activeUsernames:
+        activeUsernames.remove(username.lower())
 
 @app.post("/clear-usernames/", status_code=HTTP_201_CREATED)
 async def clear_active_usernames():
     lastActiveUsernameMessage.clear()
     activeUsernames.clear()
 
-@app.get("/get-text/{username}")
-async def get_text_for_active_username(username: str):
-    if username.lower() in activeUsernames:
-        if username.lower() in lastActiveUsernameMessage:
-            return {"Message": lastActiveUsernameMessage[username.lower()]}
-        else:
-            return {"Message": ""}
-    else:
-        return {"Message": ""}
-    
-# Experimental websockets for text
-# async def websocket_handler(websocket, path):
-#     if websocket not in textConnections:
-#         textConnections.add(websocket)
-#     data = await websocket.recv()
-#     reply = ""
-#     if data.username in activeUsernames:
-#         reply = lastActiveUsernameMessage[username]
-#     await websocket.send(reply)
-
-# start_server = websockets.serve(websocket_handler, "localhost", 8001)
+# @app.get("/get-text/{username}")
+# async def get_text_for_active_username(username: str):
+#     if username.lower() in activeUsernames:
+#         if username.lower() in lastActiveUsernameMessage:
+#             return {"Message": lastActiveUsernameMessage[username.lower()]}
+#         else:
+#             return {"Message": ""}
+#     else:
+#         return {"Message": ""}
 
 # asyncio.get_event_loop().run_until_complete(start_server)
 # asyncio.get_event_loop().run_forever()
