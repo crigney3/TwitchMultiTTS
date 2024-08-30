@@ -22,7 +22,7 @@ queues = dict(pending=deque(), pendingVoice=deque(), working=deque(), finished=d
 activeUsernames = []
 lastActiveUsernameMessage = dict()
 
-# textConnections = set()
+textConnections = set()
 
 tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
