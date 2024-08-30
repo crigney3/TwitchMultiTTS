@@ -144,13 +144,15 @@ async def socket_handler(socket):
     print(" ")
     print("Websocket active!")
     print(" ")
-    if socket not in textConnections:
-        textConnections.add(socket)
-    data = await socket.recv()
-    reply = ""
-    if data.username.lower() in activeUsernames:
-        reply = lastActiveUsernameMessage[data.username.lower()]
-    await socket.send(reply)
+    async for message in socket:
+        await socket.send(message)
+    # if socket not in textConnections:
+    #     textConnections.add(socket)
+    # data = await socket.recv()
+    # reply = ""
+    # if data.username.lower() in activeUsernames:
+    #     reply = lastActiveUsernameMessage[data.username.lower()]
+    # await socket.send(reply)
 
 async def socketStarter():
     print(" ")
@@ -160,11 +162,6 @@ async def socketStarter():
         await asyncio.get_running_loop().create_future()
 
 def socketThread(id: str):
-    # loop = asyncio.new_event_loop()
-    # asyncio.set_event_loop(loop)
-
-    time.sleep(5)
-    
     asyncio.run(socketStarter())
 
     print("We shouldn't have reached here")
