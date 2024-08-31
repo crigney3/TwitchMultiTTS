@@ -121,7 +121,7 @@ def process_audio_voice(threadID):
                 lastActiveUsernameMessage[newJob['_username'].lower()] = newJob['_message']
                 socketMessage = json.dumps({"user": newJob['_username'].lower(), "message": newJob['_message']})
                 for socket in textConnections:
-                    socket.send(socketMessage)
+                    asyncio.run(socket.send(socketMessage))
 
             print('File processed')
         else:
@@ -156,6 +156,12 @@ async def socket_handler(socket):
     # if data.username.lower() in activeUsernames:
     #     reply = lastActiveUsernameMessage[data.username.lower()]
     await socket.send(json.dumps({"message": "Connected"}))
+    while True:
+        try:
+            name = await socket.recv()
+        except websockets.ConnectionClosed:
+            print(f"Terminated")
+            break
 
 async def socketStarter():
     print(" ")
