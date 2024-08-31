@@ -160,6 +160,7 @@ async def socket_handler(socket):
         try:
             name = await socket.recv()
         except websockets.ConnectionClosed:
+            textConnections.remove(socket)
             print(f"Terminated")
             break
 
