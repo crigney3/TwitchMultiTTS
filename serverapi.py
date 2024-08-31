@@ -143,7 +143,7 @@ def get_finished_job_by_username(user: str):
 # Experimental websockets for text
 async def socket_handler(socket):
     print(" ")
-    print("Websocket active!")
+    print("Websocket connected")
     print(" ")
     async for message in socket:
         await socket.send(message)
@@ -159,7 +159,7 @@ async def socketStarter():
     print(" ")
     print("socket starter reached!")
     print(" ")
-    async with websockets.server.serve(socket_handler, "localhost", 8051):
+    async with websockets.server.serve(socket_handler, "0.0.0.0", 8051):
         await asyncio.get_running_loop().create_future()
 
 def socketThread(id: str):
