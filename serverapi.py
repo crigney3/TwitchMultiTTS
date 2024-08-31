@@ -13,6 +13,7 @@ import os
 import asyncio
 import websockets
 import websockets.server
+import json
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
@@ -118,6 +119,9 @@ def process_audio_voice(threadID):
             # active username
             if newJob['_username'].lower() in activeUsernames:
                 lastActiveUsernameMessage[newJob['_username'].lower()] = newJob['_message']
+                socketMessage = json.dumps({"user": newJob['_username'].lower(), "message": newJob['_message']})
+                for socket in textConnections:
+                    socket.send(socketMessage)
 
             print('File processed')
         else:
@@ -145,15 +149,13 @@ async def socket_handler(socket):
     print(" ")
     print("Websocket connected")
     print(" ")
-    async for message in socket:
-        await socket.send(message)
-    # if socket not in textConnections:
-    #     textConnections.add(socket)
+    if socket not in textConnections:
+        textConnections.add(socket)
     # data = await socket.recv()
     # reply = ""
     # if data.username.lower() in activeUsernames:
     #     reply = lastActiveUsernameMessage[data.username.lower()]
-    # await socket.send(reply)
+    await socket.send(json.dumps({"message": "Connected"}))
 
 async def socketStarter():
     print(" ")
