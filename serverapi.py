@@ -26,13 +26,13 @@ lastActiveUsernameMessage = dict()
 
 textConnections = set()
 
-tts = ""#TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
-tts2 = ""#TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
-tts3 = ""#TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts3 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 
-voice1 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-voice2 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-voice3 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice1 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice2 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice3 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
 
 ttsProcessors = [tts, tts2, tts3]
 ttsVoiceProcess = [voice1, voice2, voice3]
@@ -182,14 +182,14 @@ app.add_middleware(CORSMiddleware,
                    allow_headers=["*"])
 
 # Create the basic audio processor threads
-# threading.Thread(target=process_audio, args=(1000,)).start()
-# threading.Thread(target=process_audio, args=(2000,)).start()
-# threading.Thread(target=process_audio, args=(3000,)).start()
+threading.Thread(target=process_audio, args=(1000,)).start()
+threading.Thread(target=process_audio, args=(2000,)).start()
+threading.Thread(target=process_audio, args=(3000,)).start()
 
 # Create the voiced audio processor threads
-# threading.Thread(target=process_audio_voice, args=(10000,)).start()
-# threading.Thread(target=process_audio_voice, args=(20000,)).start()
-# threading.Thread(target=process_audio_voice, args=(30000,)).start()
+threading.Thread(target=process_audio_voice, args=(10000,)).start()
+threading.Thread(target=process_audio_voice, args=(20000,)).start()
+threading.Thread(target=process_audio_voice, args=(30000,)).start()
 
 # Create the cleanup thread
 threading.Thread(target=cleanup_files, args=(80000,)).start()
