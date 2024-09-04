@@ -164,7 +164,7 @@ async def socket_handler(socket):
     if socket not in textConnections:
         textConnections.add(socket)
 
-    await socket.send(json.dumps({"message": "Connected"}))
+    await socket.send(json.dumps({"message": "TTS Server Connected"}))
     while True:
         try:
             name = await socket.recv()

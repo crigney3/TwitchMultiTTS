@@ -8,6 +8,10 @@ import re
 import sys
 import TwitchPlays_Connection
 from TwitchPlays_KeyCodes import *
+import asyncio
+import websockets
+import json
+import threading
 
 ##################### GAME VARIABLES #####################
 
@@ -57,10 +61,67 @@ pyautogui.FAILSAFE = False
 linkRegex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
 
 chanceToReadMessage = 1
+characterMode = False
+
+characterToVoice = dict()
+usernameToCharacterName = dict()
 
 ##########################################################
 
 random.seed()
+
+WS_URL = "ws://127.0.0.1:8000"
+
+# Websocket to local server for character-username data
+async def socket_handler(socket):
+    print(" ")
+    print("Websocket connected")
+    print(" ")
+
+    while True:
+        try:
+            charData = await socket.recv()
+            charJson = json.loads(charData)
+            if len(charJson) != 0:
+                for characterID in charJson:
+                    character = charJson[characterID]
+                    if character['username'] == "":
+                        if character['name'] in usernameToCharacterName.values():
+                            # Username has been cleared, remove it from the list
+                            for key, value in dict(usernameToCharacterName).items():
+                                if value == character['name']:
+                                    del usernameToCharacterName[key]
+                            print(usernameToCharacterName)
+                            continue
+                        else:
+                            # Username hasn't been assigned yet
+                            continue
+
+                    if character['username'] in usernameToCharacterName.keys():
+                        if character['name'] == usernameToCharacterName[character['username']]:
+                            # This is a change other than username, don't modify anything
+                            continue
+                        else:
+                            # This is a reassignment of a current player to a new character.
+                            # Remove their old character assignment.
+                            usernameToCharacterName.pop(character['username'])
+                        
+                    
+                    usernameToCharacterName[character['username']] = character['name']
+                    print(usernameToCharacterName)
+        except websockets.ConnectionClosed:
+            print(f"Terminated")
+            break
+
+async def socketStarter():
+    async with websockets.connect(WS_URL) as ws:
+        await socket_handler(ws)
+        await asyncio.get_running_loop().create_future()
+
+def socketThread(id: str):
+    asyncio.run(socketStarter())
+
+    print("We shouldn't have reached here")
 
 # Count down before starting, so you have time to load up the game
 countdown = 0
@@ -68,6 +129,9 @@ while countdown > 0:
     print(countdown)
     countdown -= 1
     time.sleep(1)
+
+# Create the text-passing websocket thread
+threading.Thread(target=socketThread, args=(9000,)).start()
 
 if STREAMING_ON_TWITCH:
     t = TwitchPlays_Connection.Twitch()
@@ -198,6 +262,10 @@ def scan_messages():
             continue
         else:
             for message in messages_to_handle:
+                # If we're in charactermode, only process this message
+                if characterMode and message['username'] not in usernameToVoice.keys():
+                    continue
+
                 if len(active_tasks) <= MAX_WORKERS:
                     active_tasks.append(thread_pool.submit(handle_message, message))
                 else:
@@ -210,6 +278,8 @@ elif sys.argv[1] == "-some":
         chanceToReadMessage = int(sys.argv[2])
     else:
         chanceToReadMessage = 2
+elif sys.argv[1] == "-charMode":
+    characterMode = True
 
 
 scan_messages()
