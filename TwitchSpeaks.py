@@ -62,6 +62,7 @@ linkRegex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^
 
 chanceToReadMessage = 1
 characterMode = False
+voiceMode = 0
 
 characterToVoice = dict()
 usernameToCharacterName = dict()
@@ -104,10 +105,10 @@ async def socket_handler(socket):
                         else:
                             # This is a reassignment of a current player to a new character.
                             # Remove their old character assignment.
-                            usernameToCharacterName.pop(character['username'])
+                            usernameToCharacterName.pop(character['username'].lower())
                         
                     
-                    usernameToCharacterName[character['username']] = character['name']
+                    usernameToCharacterName[character['username'].lower()] = character['name'].lower()
                     print(usernameToCharacterName)
         except websockets.ConnectionClosed:
             print(f"Terminated")
@@ -161,7 +162,7 @@ def handle_message(message, voiceInput = ""):
 
         print("Got this message from " + username + ": " + msg)
 
-        if msg[0] == '!':
+        if msg[0] == '!' and not characterMode:
             # Assume this is a command to swap voices
             split = msg.split()
             subsplit = split[0].split('!')
@@ -171,6 +172,10 @@ def handle_message(message, voiceInput = ""):
             # from the message
             split.remove(split[0])
             msg = ' '.join(split)
+
+        if characterMode:
+            if characterToVoice[usernameToCharacterName[username]] != "":
+                voice = characterToVoice[usernameToCharacterName[username]]
 
         print(msg)
         print(voice)
@@ -256,14 +261,16 @@ def scan_messages():
                 # Pop the messages we want off the front of the queue
                 messages_to_handle = message_queue[0:n]
                 del message_queue[0:n]
-                last_time = time.time();
+                last_time = time.time()
 
         if not messages_to_handle:
             continue
         else:
             for message in messages_to_handle:
-                # If we're in charactermode, only process this message
-                if characterMode and message['username'] not in usernameToVoice.keys():
+                # If we're in charactermode, don't process non-character-user messages
+                print(usernameToCharacterName.keys())
+                print(message['username'])
+                if characterMode and message['username'] not in usernameToCharacterName.keys():
                     continue
 
                 if len(active_tasks) <= MAX_WORKERS:
@@ -280,6 +287,19 @@ elif sys.argv[1] == "-some":
         chanceToReadMessage = 2
 elif sys.argv[1] == "-charMode":
     characterMode = True
+    if sys.argv[2]:
+        if sys.argv[2] == "slow":
+            voiceMode = 0
+            characterToVoice['a'] = 'brit'
+            characterToVoice['b'] = 'dawn'
+        elif sys.argv[2] == "medium":
+            voiceMode = 1
+        elif sys.argv[2] == "fast":
+            voiceMode = 2
+        else:
+            voiceMode = 0
+    else:
+        voiceMode = 0
 
 
 scan_messages()
