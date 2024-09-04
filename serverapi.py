@@ -32,6 +32,7 @@ def read_constants():
         global voices
         FAST_TTS_MODEL = consts["FastModel"]
         VOICE_TTS_MODEL = consts["VoiceModel"]
+        voices = dict()
         for key in consts["Voices"]:
             voices[key] = consts["Voices"][key]
 
