@@ -56,7 +56,11 @@ pyautogui.FAILSAFE = False
 # Too general, maybe just have a bot remove all links in chat?
 linkRegex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
 
+chanceToReadMessage = 1
+
 ##########################################################
+
+random.seed()
 
 # Count down before starting, so you have time to load up the game
 countdown = 0
@@ -73,6 +77,12 @@ else:
     t.youtube_connect(YOUTUBE_CHANNEL_ID, YOUTUBE_STREAM_URL)
 
 def handle_message(message, voiceInput = ""):
+    if random.randint(1, chanceToReadMessage) != 1:
+        # If the chance to read a message is one, this will never fire.
+        # If there's some chance the message shouldn't be read, this will kill
+        # unnecessary threads.
+        return
+
     try:
         msg = message['message'].lower()
         username = message['username'].lower()
@@ -141,13 +151,10 @@ def handle_message(message, voiceInput = ""):
 
         audioResponse = requests.get("http://dionysus.headass.house:8000/get-audio/" + jobId, params={"id": jobId})
 
-        #response = requests.get("http://dionysus.headass.house:8000/get-audio", params={"username": "yakman333"})
         with open(jobId + '.wav', 'wb') as f:
             for chunk in audioResponse.iter_content(chunk_size=CHUNK_SIZE):
                 if chunk:
                     f.write(chunk)
-            
-            #f.close()
 
         print("playsound start")
         playsound(jobId + '.wav', True)
@@ -197,4 +204,12 @@ def scan_messages():
                     print(f'WARNING: active tasks ({len(active_tasks)}) exceeds number of workers ({MAX_WORKERS}). ({len(message_queue)} messages in the queue)')
 
 if sys.argv[1] == "-all":
-    scan_messages()
+    chanceToReadMessage = 1
+elif sys.argv[1] == "-some":
+    if sys.argv[2]:
+        chanceToReadMessage = int(sys.argv[2])
+    else:
+        chanceToReadMessage = 2
+
+
+scan_messages()
