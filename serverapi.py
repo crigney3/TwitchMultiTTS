@@ -17,8 +17,6 @@ import json
 
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
-voices = dict(default="VoiceClone.wav", dawn="ToriNormal.wav", corey="CoreyNormal.wav", brit="VoiceClone.wav")
-
 queues = dict(pending=deque(), pendingVoice=deque(), working=deque(), finished=deque(), cleanup=deque())
 
 activeUsernames = []
@@ -26,12 +24,12 @@ lastActiveUsernameMessage = dict()
 
 textConnections = set()
 
-FAST_TTS_MODEL = ""
-VOICE_TTS_MODEL = ""
-
 def read_constants():
     with open('consts.json') as file:
         consts = json.load(file)
+        global FAST_TTS_MODEL
+        global VOICE_TTS_MODEL
+        global voices
         FAST_TTS_MODEL = consts["FastModel"]
         VOICE_TTS_MODEL = consts["VoiceModel"]
         for key in consts["Voices"]:
