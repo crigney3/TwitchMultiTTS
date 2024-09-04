@@ -27,12 +27,12 @@ lastActiveUsernameMessage = dict()
 textConnections = set()
 
 tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
-tts2 = ""#TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
-tts3 = ""#TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+tts3 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
 
-voice1 = TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-voice2 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
-voice3 = ""#TTS("tts_models/multilingual/multi-dataset/xtts_v2").to(device)
+voice1 = TTS("tts_models/multilingual/multi-dataset/your_tts").to(device)
+voice2 = TTS("tts_models/multilingual/multi-dataset/your_tts").to(device)
+voice3 = TTS("tts_models/multilingual/multi-dataset/your_tts").to(device)
 
 ttsProcessors = [tts, tts2, tts3]
 ttsVoiceProcess = [voice1, voice2, voice3]
@@ -151,10 +151,7 @@ async def socket_handler(socket):
     print(" ")
     if socket not in textConnections:
         textConnections.add(socket)
-    # data = await socket.recv()
-    # reply = ""
-    # if data.username.lower() in activeUsernames:
-    #     reply = lastActiveUsernameMessage[data.username.lower()]
+
     await socket.send(json.dumps({"message": "Connected"}))
     while True:
         try:
@@ -190,13 +187,13 @@ app.add_middleware(CORSMiddleware,
 
 # Create the basic audio processor threads
 threading.Thread(target=process_audio, args=(1000,)).start()
-# threading.Thread(target=process_audio, args=(2000,)).start()
-# threading.Thread(target=process_audio, args=(3000,)).start()
+threading.Thread(target=process_audio, args=(2000,)).start()
+threading.Thread(target=process_audio, args=(3000,)).start()
 
 # Create the voiced audio processor threads
 threading.Thread(target=process_audio_voice, args=(10000,)).start()
-# threading.Thread(target=process_audio_voice, args=(20000,)).start()
-# threading.Thread(target=process_audio_voice, args=(30000,)).start()
+threading.Thread(target=process_audio_voice, args=(20000,)).start()
+threading.Thread(target=process_audio_voice, args=(30000,)).start()
 
 # Create the cleanup thread
 threading.Thread(target=cleanup_files, args=(80000,)).start()
