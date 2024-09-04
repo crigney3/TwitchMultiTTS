@@ -26,13 +26,26 @@ lastActiveUsernameMessage = dict()
 
 textConnections = set()
 
-tts = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
-tts2 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
-tts3 = TTS("tts_models/en/ljspeech/tacotron2-DDC_ph").to(device)
+FAST_TTS_MODEL = ""
+VOICE_TTS_MODEL = ""
 
-voice1 = TTS("tts_models/multilingual/multi-dataset/your_tts").to(device)
-voice2 = TTS("tts_models/multilingual/multi-dataset/your_tts").to(device)
-voice3 = TTS("tts_models/multilingual/multi-dataset/your_tts").to(device)
+def read_constants():
+    with open('consts.json') as file:
+        consts = json.load(file)
+        FAST_TTS_MODEL = consts["FastModel"]
+        VOICE_TTS_MODEL = consts["VoiceModel"]
+        for key in consts["Voices"]:
+            voices[key] = consts["Voices"][key]
+
+read_constants()
+
+tts = TTS(FAST_TTS_MODEL).to(device)
+tts2 = TTS(FAST_TTS_MODEL).to(device)
+tts3 = TTS(FAST_TTS_MODEL).to(device)
+
+voice1 = TTS(VOICE_TTS_MODEL).to(device)
+voice2 = TTS(VOICE_TTS_MODEL).to(device)
+voice3 = TTS(VOICE_TTS_MODEL).to(device)
 
 ttsProcessors = [tts, tts2, tts3]
 ttsVoiceProcess = [voice1, voice2, voice3]
