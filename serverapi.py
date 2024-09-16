@@ -98,6 +98,15 @@ def process_audio(threadID):
                 newJob['status'] = 'finished'
                 queues['working'].remove(newJob)
                 queues['finished'].append(newJob)
+
+                # Check if this text should be saved for the current
+                # active username
+                if newJob['_username'].lower() in activeUsernames:
+                    lastActiveUsernameMessage[newJob['_username'].lower()] = newJob['_message']
+                    socketMessage = json.dumps({"user": newJob['_username'].lower(), "message": newJob['_message']})
+                    for socket in textConnections:
+                        asyncio.run(socket.send(socketMessage))
+
                 print('File processed')
         else:
             time.sleep(0.5)

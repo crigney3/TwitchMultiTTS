@@ -20,7 +20,7 @@ import soundfile as sf
 ##################### GAME VARIABLES #####################
 
 # Replace this with your Twitch username. Must be all lowercase.
-TWITCH_CHANNEL = 'yakman333' 
+TWITCH_CHANNEL = 'twitchtoprpg' 
 
 # If streaming on Youtube, set this to False
 STREAMING_ON_TWITCH = True
@@ -224,13 +224,12 @@ def handle_message(message, voiceInput = ""):
         print(postResponseData)
         jobId = postResponseData['id']
 
-        # TTS seems to take a min of 0.3 seconds to process.
-        # Basic guess is that it takes another 0.5 seconds per 20 characters.
-        # This sleep keeps the script from spamming the server to check if its
-        # file is ready yet.
-        sleepLength = float(0.3 + ((len(msg) / 20) / 2))
-        print("sleeping for: " + str(sleepLength))
-        time.sleep(sleepLength)
+        # If we're processing with voices, sleep for a little bit.
+        # This reduces server spam
+        if characterMode and voiceMode != 2:
+            sleepLength = float(1.0 + ((len(msg) / 20) / 2))
+            print("sleeping for: " + str(sleepLength))
+            time.sleep(sleepLength)
 
         # keep a count to ensure we don't fail unexpectedly and ping forever
         retryCount = 0
@@ -265,6 +264,8 @@ def handle_message(message, voiceInput = ""):
         if voiceMode == 2:
             shift_pitch_librosa(jobId, characterToVoice[usernameToCharacterName[username]])
 
+        # Sometimes audio files are coming back way too long if the text wasn't words
+        # Maybe do something to estimate length of audio and cut it off if too long?
         print("playsound start")
         if voiceMode == 2:
             playsound(jobId + 'pitchShifted.wav', True)
