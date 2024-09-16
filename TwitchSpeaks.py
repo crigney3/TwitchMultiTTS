@@ -12,6 +12,10 @@ import asyncio
 import websockets
 import json
 import threading
+import wave
+import numpy as np
+import librosa
+import soundfile as sf
 
 ##################### GAME VARIABLES #####################
 
@@ -141,6 +145,39 @@ else:
     t = TwitchPlays_Connection.YouTube()
     t.youtube_connect(YOUTUBE_CHANNEL_ID, YOUTUBE_STREAM_URL)
 
+# Experimental function to make "voices" as quickly as possible
+# Stolen from https://stackoverflow.com/questions/43963982/python-change-pitch-of-wav-file
+def shift_pitch(filename, shiftInHZ):
+    wr = wave.open(filename, 'r')
+    # Set the parameters for the output file.
+    par = list(wr.getparams())
+    par[3] = 0  # The number of samples will be set by writeframes.
+    par = tuple(par)
+    ww = wave.open('pitch1.wav', 'w')
+    ww.setparams(par)
+
+    fr = 20
+    sz = wr.getframerate()//fr  # Read and process 1/fr second at a time.
+    # A larger number for fr means less reverb.
+    c = int(wr.getnframes()/sz)  # count of the whole file
+    shift = shiftInHZ//fr  # shifting 100 Hz
+    for num in range(c):
+        da = np.fromstring(wr.readframes(sz), dtype=np.int16)
+        left, right = da[0::2], da[1::2]  # left and right channel
+        lf, rf = np.fft.rfft(left), np.fft.rfft(right)
+        lf, rf = np.roll(lf, shift), np.roll(rf, shift)
+        lf[0:shift], rf[0:shift] = 0, 0
+        nl, nr = np.fft.irfft(lf), np.fft.irfft(rf)
+        ns = np.column_stack((nl, nr)).ravel().astype(np.int16)
+        ww.writeframes(ns.tostring())
+    wr.close()
+    ww.close()
+
+def shift_pitch_librosa(jobId, halfStepCount):
+    y, sr = librosa.load(jobId + '.wav', sr=48000) # y is a numpy array of the wav file, sr = sample rate
+    y_shifted = librosa.effects.pitch_shift(y, sr=sr, n_steps=halfStepCount, bins_per_octave=24) # shifted by 4 half steps
+    sf.write(jobId + 'pitchShifted.wav', y_shifted, 48000, 'PCM_24')
+
 def handle_message(message, voiceInput = ""):
     if random.randint(1, chanceToReadMessage) != 1:
         # If the chance to read a message is one, this will never fire.
@@ -173,7 +210,7 @@ def handle_message(message, voiceInput = ""):
             split.remove(split[0])
             msg = ' '.join(split)
 
-        if characterMode:
+        if characterMode and not voiceMode == 2:
             if characterToVoice[usernameToCharacterName[username]] != "":
                 voice = characterToVoice[usernameToCharacterName[username]]
 
@@ -225,9 +262,18 @@ def handle_message(message, voiceInput = ""):
                 if chunk:
                     f.write(chunk)
 
+        if voiceMode == 2:
+            shift_pitch_librosa(jobId, characterToVoice[usernameToCharacterName[username]])
+
         print("playsound start")
-        playsound(jobId + '.wav', True)
+        if voiceMode == 2:
+            playsound(jobId + 'pitchShifted.wav', True)
+        else:
+            playsound(jobId + '.wav', True)
+        
         print("playsound over")
+        if voiceMode == 2:
+            os.remove(jobId + 'pitchShifted.wav')
         os.remove(jobId + '.wav')
 
     except Exception as e:
@@ -296,6 +342,9 @@ elif sys.argv[1] == "-charMode":
             voiceMode = 1
         elif sys.argv[2] == "fast":
             voiceMode = 2
+            characterToVoice['a'] = 4
+            characterToVoice['b'] = -4
+            characterToVoice['c'] = -10
         else:
             voiceMode = 0
     else:
