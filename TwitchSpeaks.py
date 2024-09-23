@@ -16,6 +16,7 @@ import wave
 import numpy as np
 import librosa
 import soundfile as sf
+import uuid
 
 ##################### GAME VARIABLES #####################
 
@@ -48,21 +49,35 @@ MESSAGE_RATE = 0.5
 MAX_QUEUE_LENGTH = 20
 MAX_WORKERS = 100 # Maximum number of threads you can process at a time 
 
+# Pull secrets from consts
+def read_constants():
+    with open('consts.json') as file:
+        consts = json.load(file)
+        global ELEVENLABS_API_KEY
+        global ELEVENLABS_URL
+        ELEVENLABS_API_KEY = consts["APIKey"]
+        ELEVENLABS_URL = consts["ElevenURL"]
+
+read_constants()
+
 # TTS Processing Vars
-# Used for elevenlabs, no longer needed
+# Used for elevenlabs, needed once again
 CHUNK_SIZE = 1024
-url = "https://api.elevenlabs.io/v1/text-to-speech/pqHfZKP75CvOlQylNhV4"
+url = ELEVENLABS_URL
 
 headers = {
   "Accept": "audio/mpeg",
   "Content-Type": "application/json",
-  "xi-api-key": "sk_af4a39d82eea6f20d5d30723168cf529172c9593251c6217"
+  "xi-api-key": ELEVENLABS_API_KEY
 }
 
 pyautogui.FAILSAFE = False
 
 # Too general, maybe just have a bot remove all links in chat?
 linkRegex = r"(?i)\b((?:https?://|www\d{0,3}[.]|[a-z0-9.\-]+[.][a-z]{2,4}/)(?:[^\s()<>]+|\(([^\s()<>]+|(\([^\s()<>]+\)))*\))+(?:\(([^\s()<>]+|(\([^\s()<>]+\)))*\)|[^\s`!()\[\]{};:'\".,<>?«»“”‘’]))"
+
+# Necessary for OBS audio capture remaining accurate
+os.system('title Character TTS')
 
 chanceToReadMessage = 1
 characterMode = False
@@ -88,8 +103,8 @@ async def socket_handler(socket):
             charData = await socket.recv()
             charJson = json.loads(charData)
             if len(charJson) != 0:
-                for characterID in charJson:
-                    character = charJson[characterID]
+                for characterID in charJson['content']:
+                    character = charJson['content'][characterID]
                     if character['username'] == "":
                         if character['name'] in usernameToCharacterName.values():
                             # Username has been cleared, remove it from the list
@@ -111,7 +126,6 @@ async def socket_handler(socket):
                             # Remove their old character assignment.
                             usernameToCharacterName.pop(character['username'].lower())
                         
-                    
                     usernameToCharacterName[character['username'].lower()] = character['name'].lower()
                     print(usernameToCharacterName)
         except websockets.ConnectionClosed:
@@ -147,6 +161,7 @@ else:
 
 # Experimental function to make "voices" as quickly as possible
 # Stolen from https://stackoverflow.com/questions/43963982/python-change-pitch-of-wav-file
+# This did not really work, keeping it for later study
 def shift_pitch(filename, shiftInHZ):
     wr = wave.open(filename, 'r')
     # Set the parameters for the output file.
@@ -192,10 +207,11 @@ def handle_message(message, voiceInput = ""):
 
         # Check if there's a link in this message,
         # And don't read it if so
-        url = re.findall(linkRegex, msg)
-        print(url)
-        if str(url) != "[]":
-            return
+        # Solved by banning all links
+        # url = re.findall(linkRegex, msg)
+        # print(url)
+        # if str(url) != "[]":
+        #     return
 
         print("Got this message from " + username + ": " + msg)
 
@@ -217,65 +233,96 @@ def handle_message(message, voiceInput = ""):
         print(msg)
         print(voice)
 
-        #response = requests.post(url, json=TTSData, headers=headers)
-        postResponse = requests.post("http://dionysus.headass.house:8000/create-job/", params={"username": "yakman333", "message": msg, "voice": voice})
+        jobId = str(uuid.uuid4())
 
-        postResponseData = postResponse.json()
-        print(postResponseData)
-        jobId = postResponseData['id']
+        if not voiceMode == 3:
+            #response = requests.post(url, json=TTSData, headers=headers)
+            postResponse = requests.post("http://dionysus.headass.house:8000/create-job/", params={"username": username, "message": msg, "voice": voice})
 
-        # If we're processing with voices, sleep for a little bit.
-        # This reduces server spam
-        if characterMode and voiceMode != 2:
-            sleepLength = float(1.0 + ((len(msg) / 20) / 2))
-            print("sleeping for: " + str(sleepLength))
-            time.sleep(sleepLength)
+            postResponseData = postResponse.json()
+            print(postResponseData)
+            jobId = postResponseData['id']
 
-        # keep a count to ensure we don't fail unexpectedly and ping forever
-        retryCount = 0
-        while True:
+            # If we're processing with voices, sleep for a little bit.
+            # This reduces server spam
+            if characterMode and voiceMode != 2:
+                sleepLength = float(1.0 + ((len(msg) / 20) / 2))
+                print("sleeping for: " + str(sleepLength))
+                time.sleep(sleepLength)
+
+            # keep a count to ensure we don't fail unexpectedly and ping forever
+            retryCount = 0
+            while True:
+                if retryCount > 40:
+                    break
+                jobStatus = requests.get('http://dionysus.headass.house:8000/jobs/' + jobId, params={"id": jobId})
+                jobStatusData = jobStatus.json()
+                if jobStatusData['status'] == 'finished':
+                    break
+                elif jobStatusData['status'] == 'pending' or jobStatusData['status'] == 'pendingVoice':
+                    print("Job is still pending - messages are very backed up or this is a voice message while voices are still initializing")
+                    if characterMode and voiceMode != 2:
+                        time.sleep(3.0)
+                    else:
+                        time.sleep(0.3)
+                    retryCount += 1
+                elif jobStatusData['status'] == 'working':
+                    # If the job is still working, sleep for a bit
+                    if characterMode and voiceMode != 2:
+                        time.sleep(1.0)
+                    else:
+                        time.sleep(0.2)
+                    retryCount += 1
+                else:
+                    raise Exception("Got bad status code at " + jobStatusData['status'] + ", check server for issues")
+
             if retryCount > 40:
-                break
-            jobStatus = requests.get('http://dionysus.headass.house:8000/jobs/' + jobId, params={"id": jobId})
-            jobStatusData = jobStatus.json()
-            if jobStatusData['status'] == 'finished':
-                break
-            elif jobStatusData['status'] == 'pending' or jobStatusData['status'] == 'pendingVoice':
-                print("Job is still pending - messages are very backed up or this is a voice message while voices are still initializing")
-                time.sleep(3.0)
-                retryCount += 1
-            elif jobStatusData['status'] == 'working':
-                # If the job is still working, sleep for a bit
-                time.sleep(1.0)
-                retryCount += 1
-            else:
-                raise Exception("Got bad status code at " + jobStatusData['status'] + ", check server for issues")
-        
-        if retryCount > 40:
-            raise Exception("Too many retries!")
+                raise Exception("Too many retries!")
 
-        audioResponse = requests.get("http://dionysus.headass.house:8000/get-audio/" + jobId, params={"id": jobId})
+            audioResponse = requests.get("http://dionysus.headass.house:8000/get-audio/" + jobId, params={"id": jobId})
 
-        with open(jobId + '.wav', 'wb') as f:
-            for chunk in audioResponse.iter_content(chunk_size=CHUNK_SIZE):
-                if chunk:
-                    f.write(chunk)
+            with open(jobId + '.wav', 'wb') as f:
+                for chunk in audioResponse.iter_content(chunk_size=CHUNK_SIZE):
+                    if chunk:
+                        f.write(chunk)
 
-        if voiceMode == 2:
-            shift_pitch_librosa(jobId, characterToVoice[usernameToCharacterName[username]])
+            if voiceMode == 2:
+                shift_pitch_librosa(jobId, characterToVoice[usernameToCharacterName[username]])
+        else:
+            # We're in elevenlabs voicemode, so use their API
+            data = {
+                "text": msg,
+                "model_id": voice,
+                "voice_settings": {
+                    "stability": 0.5,
+                    "similarity_boost": 0.5
+                }
+            }
+
+            response = requests.post(url, json=data, headers=headers)
+            with open(jobId + '.mp3', 'wb') as f:
+                for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
+                    if chunk:
+                        f.write(chunk)
 
         # Sometimes audio files are coming back way too long if the text wasn't words
         # Maybe do something to estimate length of audio and cut it off if too long?
         print("playsound start")
         if voiceMode == 2:
             playsound(jobId + 'pitchShifted.wav', True)
+        elif voiceMode == 3:
+            playsound(jobId + '.mp3', True)
         else:
             playsound(jobId + '.wav', True)
         
         print("playsound over")
         if voiceMode == 2:
             os.remove(jobId + 'pitchShifted.wav')
-        os.remove(jobId + '.wav')
+        
+        if voiceMode == 3:
+            os.remove(jobId + '.mp3')
+        else:
+            os.remove(jobId + '.wav')
 
     except Exception as e:
         print("Encountered exception: " + str(e))
@@ -318,6 +365,7 @@ def scan_messages():
                 print(usernameToCharacterName.keys())
                 print(message['username'])
                 if characterMode and message['username'] not in usernameToCharacterName.keys():
+                    print("skipping")
                     continue
 
                 if len(active_tasks) <= MAX_WORKERS:
@@ -337,15 +385,21 @@ elif sys.argv[1] == "-charMode":
     if sys.argv[2]:
         if sys.argv[2] == "slow":
             voiceMode = 0
-            characterToVoice['a'] = 'brit'
-            characterToVoice['b'] = 'dawn'
+            characterToVoice['lachlan macdiver'] = 'lachlan'
+            characterToVoice['noirbie'] = 'noirbie'
+            characterToVoice['s. quatch'] = 'quatch'
         elif sys.argv[2] == "medium":
             voiceMode = 1
         elif sys.argv[2] == "fast":
             voiceMode = 2
-            characterToVoice['a'] = 4
-            characterToVoice['b'] = -4
-            characterToVoice['c'] = -10
+            characterToVoice['lachlan macdiver'] = 4
+            characterToVoice['noirbie'] = -4
+            characterToVoice['s. quatch'] = -10
+        elif sys.argv[2] == "eleven":
+            voiceMode = 3
+            characterToVoice['lachlan macdiver'] = "eleven_monolingual_v1"
+            characterToVoice['noirbie'] = "eleven_monolingual_v1"
+            characterToVoice['s. quatch'] = "eleven_monolingual_v1"
         else:
             voiceMode = 0
     else:
