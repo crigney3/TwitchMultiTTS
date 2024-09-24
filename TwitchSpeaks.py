@@ -51,12 +51,15 @@ MAX_WORKERS = 100 # Maximum number of threads you can process at a time
 
 # Pull secrets from consts
 def read_constants():
-    with open('consts.json') as file:
-        consts = json.load(file)
-        global ELEVENLABS_API_KEY
-        global ELEVENLABS_URL
-        ELEVENLABS_API_KEY = consts["APIKey"]
-        ELEVENLABS_URL = consts["ElevenURL"]
+    try:
+        with open('consts.json') as file:
+            consts = json.load(file)
+            global ELEVENLABS_API_KEY
+            global ELEVENLABS_URL
+            ELEVENLABS_API_KEY = consts["APIKey"]
+            ELEVENLABS_URL = consts["ElevenURL"]
+    except:
+        print("Couldn't find/read secrets file")
 
 read_constants()
 
@@ -321,8 +324,8 @@ def handle_message(message, voiceInput = ""):
         
         if voiceMode == 3:
             os.remove(jobId + '.mp3')
-        else:
-            os.remove(jobId + '.wav')
+            
+        os.remove(jobId + '.wav')
 
     except Exception as e:
         print("Encountered exception: " + str(e))
