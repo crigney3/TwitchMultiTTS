@@ -88,6 +88,7 @@ voiceMode = 0
 
 characterToVoice = dict()
 usernameToCharacterName = dict()
+usernameToCharacterID = dict()
 
 ##########################################################
 
@@ -100,6 +101,9 @@ async def socket_handler(socket):
     print(" ")
     print("Websocket connected")
     print(" ")
+
+    global charJson
+    charJson = {}
 
     while True:
         try:
@@ -114,6 +118,9 @@ async def socket_handler(socket):
                             for key, value in dict(usernameToCharacterName).items():
                                 if value == character['name']:
                                     del usernameToCharacterName[key]
+                            for key, value in dict(usernameToCharacterID).items():
+                                if value == characterID:
+                                    del usernameToCharacterID[key]
                             print(usernameToCharacterName)
                             continue
                         else:
@@ -128,9 +135,31 @@ async def socket_handler(socket):
                             # This is a reassignment of a current player to a new character.
                             # Remove their old character assignment.
                             usernameToCharacterName.pop(character['username'].lower())
-                        
-                    usernameToCharacterName[character['username'].lower()] = character['name'].lower()
-                    print(usernameToCharacterName)
+                            usernameToCharacterID.pop(character['username'].lower())
+                    else:
+                        usernameToCharacterName[character['username'].lower()] = character['name'].lower()
+                        usernameToCharacterID[character['username'].lower()] = characterID
+                        print(usernameToCharacterName)
+        except websockets.ConnectionClosed:
+            print(f"Terminated")
+            break
+
+async def socket_handler_text_update(socket):
+    global charJson
+    charJson = {}
+
+    while True:
+        try:
+            if len(charJson) != 0:
+                time.sleep(0.5)
+                for characterID in charJson['content']:
+                    if charJson['content'][characterID]["dirty"]:
+                        charJson['content'][characterID]["dirty"] = False  
+                        print(json.dumps(charJson))                    
+                        await socket.send(json.dumps(charJson))
+                        print("Sending new character text")
+                        await socket.recv()
+                        print("received return")
         except websockets.ConnectionClosed:
             print(f"Terminated")
             break
@@ -140,10 +169,18 @@ async def socketStarter():
         await socket_handler(ws)
         await asyncio.get_running_loop().create_future()
 
+async def socketStarterText():
+    async with websockets.connect(WS_URL) as ws:
+        await socket_handler_text_update(ws)
+        await asyncio.get_running_loop().create_future()
+
 def socketThread(id: str):
     asyncio.run(socketStarter())
 
     print("We shouldn't have reached here")
+
+def socketTextThread(id: str):
+    asyncio.run(socketStarterText())
 
 # Count down before starting, so you have time to load up the game
 countdown = 0
@@ -154,6 +191,7 @@ while countdown > 0:
 
 # Create the text-passing websocket thread
 threading.Thread(target=socketThread, args=(9000,)).start()
+threading.Thread(target=socketTextThread, args=(8000,)).start()
 
 if STREAMING_ON_TWITCH:
     t = TwitchPlays_Connection.Twitch()
@@ -295,14 +333,15 @@ def handle_message(message, voiceInput = ""):
             # We're in elevenlabs voicemode, so use their API
             data = {
                 "text": msg,
-                "model_id": voice,
                 "voice_settings": {
                     "stability": 0.5,
-                    "similarity_boost": 0.5
+                    "similarity_boost": 1.0
                 }
             }
 
-            response = requests.post(url, json=data, headers=headers)
+            response = requests.post(url + voice, json=data, headers=headers)
+            charJson["content"][usernameToCharacterID[username]]["speakerText"] = msg
+            charJson["content"][usernameToCharacterID[username]]["dirty"] = True
             with open(jobId + '.mp3', 'wb') as f:
                 for chunk in response.iter_content(chunk_size=CHUNK_SIZE):
                     if chunk:
@@ -402,7 +441,7 @@ elif sys.argv[1] == "-charMode":
             voiceMode = 3
             characterToVoice['lachlan macdiver'] = "eleven_monolingual_v1"
             characterToVoice['noirbie'] = "eleven_monolingual_v1"
-            characterToVoice['s. quatch'] = "eleven_monolingual_v1"
+            characterToVoice['dr. squatch'] = "2VzDonIJileyndczvhXW"
         else:
             voiceMode = 0
     else:
